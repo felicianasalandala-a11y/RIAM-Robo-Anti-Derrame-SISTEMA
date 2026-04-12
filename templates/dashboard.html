@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>R.I.A.M - Dashboard</title>
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+        }
+        
+        /* Cabeçalho */
+        .header {
+            background: linear-gradient(135deg, #1a2980 0%, #26d0ce 100%);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 24px;
+        }
+        
+        .header h1 span {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .user-name {
+            background: rgba(255,255,255,0.2);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+        
+        .logout-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+        
+        /* Container principal */
+        .container {
+            max-width: 1400px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+        
+        /* Cards de estatísticas */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: transform 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .stat-card h3 {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #1a2980;
+        }
+        
+        /* Painel de monitoramento */
+        .monitoring-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .monitoring-panel h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+        
+        .sensor-readings {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .sensor {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+        
+        .sensor:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .sensor-label {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .sensor-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .area-info {
+            margin-top: 20px;
+            text-align: center;
+            padding: 15px;
+            background: #e8f4f8;
+            border-radius: 10px;
+        }
+        
+        .area-info .sensor-value {
+            font-size: 18px;
+            color: #1a2980;
+        }
+        
+        /* ============================================ */
+        /* PAINEL DO BIORREMEDIADOR (NOVO) */
+        /* ============================================ */
+        .bioremediador-panel {
+            background: linear-gradient(135deg, #1a2980 0%, #26d0ce 100%);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .bioremediador-panel h2 {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .bioremediador-status {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+        
+        .bio-card {
+            background: rgba(255,255,255,0.15);
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            backdrop-filter: blur(5px);
+        }
+        
+        .bio-card .label {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 8px;
+        }
+        
+        .bio-card .value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .bio-status {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .bio-status.ativo {
+            background: #28a745;
+            color: white;
+            animation: pulse 1s infinite;
+        }
+        
+        .bio-status.inativo {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .bio-status.preparando {
+            background: #ffc107;
+            color: #333;
+            animation: pulse 1s infinite;
+        }
+        
+        .bio-status.emergencia {
+            background: #dc3545;
+            color: white;
+            animation: blink 0.5s infinite;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 4px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #28a745;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+            width: 0%;
+        }
+        
+        .btn-bioremediador {
+            background: white;
+            color: #1a2980;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .btn-bioremediador:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Barra de alerta */
+        .alert-bar {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+        
+        .alert-bar.show {
+            display: block;
+            animation: blink 0.5s infinite;
+        }
+        
+        .alert-message {
+            color: #856404;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        /* Indicador de status */
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-normal { background: #28a745; box-shadow: 0 0 5px #28a745; }
+        .status-alerta { background: #ffc107; box-shadow: 0 0 5px #ffc107; }
+        .status-critico { background: #dc3545; box-shadow: 0 0 5px #dc3545; animation: pulse 1s infinite; }
+        
+        /* Gráfico */
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .chart-container h3 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        /* Botões de navegação */
+        .nav-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .nav-btn {
+            background: linear-gradient(135deg, #1a2980 0%, #26d0ce 100%);
+            color: white;
+            padding: 12px 25px;
+            text-decoration: none;
+            border-radius: 10px;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .nav-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+            font-size: 12px;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌊 R.I.A.M <span>Monitoramento em Tempo Real</span></h1>
+        <div class="user-info">
+            <div class="user-name">👤 {{ usuario }}</div>
+            <a href="/logout" class="logout-btn">Sair</a>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- Barra de alerta -->
+        <div id="alertBar" class="alert-bar">
+            <div class="alert-message" id="alertMessage"></div>
+        </div>
+        
+        <!-- Cards de estatísticas -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>📊 Status da Água</h3>
+                <div class="stat-value">
+                    <span class="status-indicator" id="statusIndicator"></span>
+                    <span id="statusText">Aguardando...</span>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>🛢️ Total de Derrames</h3>
+                <div class="stat-value" id="totalDerrames">{{ total_derrames }}</div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>🗺️ Áreas Monitoradas</h3>
+                <div class="stat-value">{{ areas|length }}</div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>🤖 Robôs Ativos</h3>
+                <div class="stat-value">{{ robos|length }}</div>
+            </div>
+        </div>
+        
+        <!-- ============================================ -->
+        <!-- PAINEL DO BIORREMEDIADOR (NOVO) -->
+        <!-- ============================================ -->
+        <div class="bioremediador-panel" id="bioremediadorPanel">
+            <h2>
+                🧫 BIORREMEDIADOR
+                <span id="bioStatusBadge" class="bio-status inativo">INATIVO</span>
+            </h2>
+            <p style="font-size: 14px; opacity: 0.9;">
+                Sistema de dispersão biológica para degradação de hidrocarbonetos.
+                Acelera o desenvolvimento de bactérias que se alimentam do petróleo.
+            </p>
+            
+            <div class="bioremediador-status">
+                <div class="bio-card">
+                    <div class="label">💧 Reservatório de Agente</div>
+                    <div class="value" id="reservatorioNivel">0%</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="reservatorioFill"></div>
+                    </div>
+                </div>
+                <div class="bio-card">
+                    <div class="label">🦠 Atividade Bacteriana</div>
+                    <div class="value" id="atividadeBacteriana">0%</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="bacteriaFill"></div>
+                    </div>
+                </div>
+                <div class="bio-card">
+                    <div class="label">⏱️ Última Dispersão</div>
+                    <div class="value" id="ultimaDispersao" style="font-size: 16px;">--:--:--</div>
+                </div>
+                <div class="bio-card">
+                    <div class="label">🎯 Petróleo Degradado</div>
+                    <div class="value" id="petroleoDegradado">0 L</div>
+                </div>
+            </div>
+            
+            <button class="btn-bioremediador" onclick="acionarBiorremediador()" id="btnBiorremediador">
+                🧪 ACIONAR BIORREMEDIADOR (EMERGÊNCIA)
+            </button>
+            <p style="font-size: 11px; margin-top: 10px; opacity: 0.7;">
+                * Em caso de derrame, o sistema aciona automaticamente o biorremediador
+            </p>
+        </div>
+        
+        <!-- Painel de leituras -->
+        <div class="monitoring-panel">
+            <h2>📡 Leituras do Robô - Tempo Real</h2>
+            <div class="sensor-readings">
+                <div class="sensor">
+                    <div class="sensor-label">🔬 Fluorescência (Petróleo)</div>
+                    <div class="sensor-value" id="fluorescencia">--%</div>
+                </div>
+                <div class="sensor">
+                    <div class="sensor-label">📏 Distância do Obstáculo</div>
+                    <div class="sensor-value" id="distancia">-- cm</div>
+                </div>
+                <div class="sensor">
+                    <div class="sensor-label">🕐 Última Atualização</div>
+                    <div class="sensor-value" id="hora" style="font-size: 16px;">--:--:--</div>
+                </div>
+            </div>
+            <div class="area-info">
+                <div class="sensor-label">📍 Posição Atual</div>
+                <div class="sensor-value" id="posicao">Aguardando dados...</div>
+            </div>
+            <div class="area-info">
+                <div class="sensor-label">🗺️ Área de Atuação</div>
+                <div class="sensor-value" id="area" style="color: #1a2980;">--</div>
+            </div>
+        </div>
+        
+        <!-- Gráfico -->
+        <div class="chart-container">
+            <h3>📈 Histórico de Fluorescência (últimas 20 leituras)</h3>
+            <canvas id="fluoChart" width="400" height="200"></canvas>
+        </div>
+        
+        <!-- Botões de navegação -->
+        <div class="nav-buttons">
+            <a href="/registros" class="nav-btn">
+                📋 Ver Histórico de Derrames
+            </a>
+        </div>
+        
+        <div class="footer">
+            <p>R.I.A.M - Robô Inteligente Anti Derrame Marítimo | Dados em Tempo Real via LoRa | Sistema de Biorremediação Integrado</p>
+        </div>
+    </div>
+    
+    <script>
+        // Conectar ao WebSocket
+        const socket = io();
+        let fluoChart = null;
+        let dadosFluo = [];
+        
+        // Variáveis do biorremediador
+        let reservatorioNivel = 100; // 100% cheio
+        let atividadeBacteriana = 0;
+        let petroleoDegradado = 0;
+        let biorremediadorAtivo = false;
+        
+        // Inicializar gráfico
+        function initChart() {
+            const ctx = document.getElementById('fluoChart').getContext('2d');
+            fluoChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Fluorescência (%)',
+                        data: [],
+                        borderColor: '#1a2980',
+                        backgroundColor: 'rgba(26, 41, 128, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true,
+                        pointBackgroundColor: '#1a2980',
+                        pointBorderColor: '#fff',
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Intensidade (%)',
+                                color: '#666'
+                            },
+                            grid: {
+                                color: '#e0e0e0'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Leituras',
+                                color: '#666'
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Fluorescência: ${context.raw}%`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Atualizar gráfico
+        function updateChart(valor) {
+            dadosFluo.push(valor);
+            if (dadosFluo.length > 20) dadosFluo.shift();
+            
+            if (fluoChart) {
+                fluoChart.data.labels = dadosFluo.map((_, i) => i + 1);
+                fluoChart.data.datasets[0].data = dadosFluo;
+                fluoChart.update();
+            }
+        }
+        
+        // Atualizar hora
+        function updateHora() {
+            const now = new Date();
+            const hora = now.toLocaleTimeString('pt-BR');
+            document.getElementById('hora').innerHTML = hora;
+        }
+        
+        // Atualizar status da água
+        function updateStatus(fluorescencia) {
+            const statusText = document.getElementById('statusText');
+            const statusIndicator = document.getElementById('statusIndicator');
+            
+            if (fluorescencia > 70) {
+                statusText.innerHTML = '🔴 DERRAME DETECTADO';
+                statusIndicator.className = 'status-indicator status-critico';
+            } else if (fluorescencia > 40) {
+                statusText.innerHTML = '🟡 POSSÍVEL CONTAMINAÇÃO';
+                statusIndicator.className = 'status-indicator status-alerta';
+            } else {
+                statusText.innerHTML = '🟢 NORMAL';
+                statusIndicator.className = 'status-indicator status-normal';
+            }
+        }
+        
+        // Mostrar alerta
+        function mostrarAlerta(mensagem) {
+            const alertBar = document.getElementById('alertBar');
+            const alertMessage = document.getElementById('alertMessage');
+            
+            alertMessage.innerHTML = mensagem;
+            alertBar.classList.add('show');
+            
+            setTimeout(() => {
+                alertBar.classList.remove('show');
+            }, 10000);
+        }
+        
+        // ============================================
+        // FUNÇÕES DO BIORREMEDIADOR
+        // ============================================
+        
+        function atualizarInterfaceBiorremediador() {
+            document.getElementById('reservatorioNivel').innerHTML = reservatorioNivel + '%';
+            document.getElementById('reservatorioFill').style.width = reservatorioNivel + '%';
+            document.getElementById('atividadeBacteriana').innerHTML = atividadeBacteriana + '%';
+            document.getElementById('bacteriaFill').style.width = atividadeBacteriana + '%';
+            document.getElementById('petroleoDegradado').innerHTML = petroleoDegradado + ' L';
+        }
+        
+        function acionarBiorremediador() {
+            if (reservatorioNivel <= 0) {
+                mostrarAlerta('⚠️ Reservatório de agente biorremediador vazio! Recarregue o sistema.');
+                return;
+            }
+            
+            biorremediadorAtivo = true;
+            const bioStatusBadge = document.getElementById('bioStatusBadge');
+            bioStatusBadge.className = 'bio-status ativo';
+            bioStatusBadge.innerHTML = 'ATIVO';
+            
+            mostrarAlerta('🧪 BIORREMEDIADOR ACIONADO! Dispersando agente biológico no mar...');
+            
+            // Reduzir reservatório
+            reservatorioNivel = Math.max(0, reservatorioNivel - 10);
+            
+            // Aumentar atividade bacteriana
+            atividadeBacteriana = Math.min(100, atividadeBacteriana + 15);
+            
+            // Registrar hora da dispersão
+            const now = new Date();
+            document.getElementById('ultimaDispersao').innerHTML = now.toLocaleTimeString('pt-BR');
+            
+            atualizarInterfaceBiorremediador();
+            
+            // Desativar após 30 segundos se não houver derrame
+            setTimeout(() => {
+                if (biorremediadorAtivo) {
+                    biorremediadorAtivo = false;
+                    bioStatusBadge.className = 'bio-status inativo';
+                    bioStatusBadge.innerHTML = 'INATIVO';
+                }
+            }, 30000);
+        }
+        
+        function simularDegradacao(intensidadeDerrame) {
+            if (biorremediadorAtivo || intensidadeDerrame > 70) {
+                // A cada derrame, aumenta a degradação
+                const degradado = Math.floor(intensidadeDerrame * 2.5);
+                petroleoDegradado += degradado;
+                
+                // Aumenta atividade bacteriana
+                atividadeBacteriana = Math.min(100, atividadeBacteriana + 5);
+                
+                // Reduz reservatório gradualmente
+                reservatorioNivel = Math.max(0, reservatorioNivel - 2);
+                
+                atualizarInterfaceBiorremediador();
+                
+                if (intensidadeDerrame > 70) {
+                    mostrarAlerta(`🧫 Bactérias em ação! ${degradado}L de petróleo estão sendo degradados no mar.`);
+                }
+            }
+        }
+        
+        // Recarregar reservatório (chamado quando necessário)
+        function recarregarReservatorio() {
+            reservatorioNivel = 100;
+            atualizarInterfaceBiorremediador();
+            mostrarAlerta('✅ Reservatório de agente biorremediador recarregado!');
+        }
+        
+        // ============================================
+        // RECEBER DADOS DO WEBSOCKET
+        // ============================================
+        
+        // Receber nova leitura via WebSocket
+        socket.on('nova_leitura', function(data) {
+            console.log('Nova leitura:', data);
+            
+            // Atualizar valores na tela
+            document.getElementById('fluorescencia').innerHTML = data.fluorescencia + '%';
+            document.getElementById('distancia').innerHTML = data.distancia + ' cm';
+            document.getElementById('posicao').innerHTML = `${data.latitude.toFixed(6)}, ${data.longitude.toFixed(6)}`;
+            document.getElementById('area').innerHTML = data.area;
+            
+            // Atualizar status
+            updateStatus(data.fluorescencia);
+            
+            // Atualizar gráfico
+            updateChart(data.fluorescencia);
+            
+            // Atualizar hora
+            updateHora();
+            
+            // Simular degradação se for derrame
+            if (data.fluorescencia > 70) {
+                simularDegradacao(data.fluorescencia);
+            }
+            
+            // Atualizar total de derrames
+            fetch('/api/estatisticas')
+                .then(response => response.json())
+                .then(stats => {
+                    document.getElementById('totalDerrames').innerHTML = stats.total_derrames;
+                });
+        });
+        
+        // Receber alerta de derrame
+        socket.on('alerta_derrame', function(data) {
+            console.log('Alerta recebido:', data);
+            mostrarAlerta(data.mensagem);
+            
+            // Acionar automaticamente o biorremediador em caso de derrame
+            if (data.fluorescencia > 70) {
+                const bioStatusBadge = document.getElementById('bioStatusBadge');
+                bioStatusBadge.className = 'bio-status emergencia';
+                bioStatusBadge.innerHTML = '⚠️ EMERGÊNCIA - AÇÃO AUTOMÁTICA';
+                
+                // Acionar biorremediador após 2 segundos
+                setTimeout(() => {
+                    acionarBiorremediador();
+                }, 2000);
+            }
+        });
+        
+        // Carregar histórico de leituras
+        async function carregarHistorico() {
+            try {
+                const response = await fetch('/api/ultimas_posicoes?limite=20');
+                const dados = await response.json();
+                console.log('Histórico carregado:', dados);
+            } catch (error) {
+                console.error('Erro ao carregar histórico:', error);
+            }
+        }
+        
+        // Inicialização
+        initChart();
+        carregarHistorico();
+        updateHora();
+        atualizarInterfaceBiorremediador();
+        
+        // Atualizar hora a cada segundo
+        setInterval(updateHora, 1000);
+        
+        // Atualizar estatísticas a cada 30 segundos
+        setInterval(async () => {
+            try {
+                const response = await fetch('/api/estatisticas');
+                const stats = await response.json();
+                document.getElementById('totalDerrames').innerHTML = stats.total_derrames;
+            } catch (error) {
+                console.error('Erro ao atualizar estatísticas:', error);
+            }
+        }, 30000);
+        
+        // Recarregar reservatório automaticamente quando ficar baixo
+        setInterval(() => {
+            if (reservatorioNivel <= 10) {
+                recarregarReservatorio();
+            }
+        }, 60000);
+    </script>
+</body>
+</html>
