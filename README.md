@@ -18,3 +18,7 @@ Sistema automatizado para deteção, alerta e mitigação de derrames de petról
 - **Banco de Dados:** MySQL
 - **Hardware:** ESP32, LoRa, GPS, Sensor de Fluorescência
 
+## Como Executar
+```bash
+pip install -r requirements.txt
+python app.py
